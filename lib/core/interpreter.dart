@@ -81,8 +81,9 @@ class Interpreter {
         turtle.setColor(Color(c.colorValue));
       case SetVarStmt v:
         final name = v.name.trim();
-        if (name.isEmpty)
+        if (name.isEmpty) {
           throw LangError('A "set" block needs a variable name');
+        }
         vars[name] = _eval(v.value);
       case PrintStmt p:
         onPrint?.call(_fmt(_eval(p.value)));

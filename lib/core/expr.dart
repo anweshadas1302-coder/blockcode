@@ -141,11 +141,14 @@ class ExprParser {
 
   Expr _primary() {
     _ws();
-    if (_p >= _src.length)
+    if (_p >= _src.length) {
       throw LangError('Expression ended too early: "$_src"');
+    }
     if (_match('(')) {
       final inner = _comparison();
-      if (!_match(')')) throw LangError('Missing ")" in "$_src"');
+      if (!_match(')')) {
+        throw LangError('Missing ")" in "$_src"');
+      }
       return inner;
     }
     final start = _p;

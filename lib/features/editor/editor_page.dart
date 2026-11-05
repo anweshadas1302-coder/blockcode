@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../core/codegen.dart';
 import '../stage/stage_view.dart';
@@ -21,12 +22,81 @@ class _EditorPageState extends State<EditorPage> {
   void initState() {
     super.initState();
     ctrl.loadExample('Square');
+    WidgetsBinding.instance.addPostFrameCallback((_) => _maybeShowHelp());
   }
 
   @override
   void dispose() {
     ctrl.dispose();
     super.dispose();
+  }
+
+  Future<void> _maybeShowHelp() async {
+    final prefs = await SharedPreferences.getInstance();
+    if (prefs.getBool('seen_help') ?? false) return;
+    await prefs.setBool('seen_help', true);
+    if (mounted) _showHelp();
+  }
+
+  void _showHelp() {
+    showDialog<void>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('How BlockCode works'),
+        content: const SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              _HelpStep(
+                icon: Icons.touch_app,
+                title: '1. Build',
+                text:
+                    'Tap a block at the bottom to add it, or long-press and drag it '
+                    'to an exact spot. Drop blocks inside "repeat" or "if" to put '
+                    'them in a loop.',
+              ),
+              _HelpStep(
+                icon: Icons.play_arrow,
+                title: '2. Run',
+                text:
+                    'The computer reads your blocks from top to bottom, one at a '
+                    'time. The block with the yellow border is the one running now.',
+              ),
+              _HelpStep(
+                icon: Icons.navigation,
+                title: '3. Watch the turtle',
+                text:
+                    'The green triangle is a turtle. "move" walks it forward and '
+                    'draws a line. "turn" rotates it clockwise. It starts in the '
+                    'middle, facing up.',
+              ),
+              _HelpStep(
+                icon: Icons.repeat,
+                title: '4. Loops and variables',
+                text:
+                    '"repeat" runs its blocks many times. "set variable" stores a '
+                    'number you can reuse, like  size + 5.',
+              ),
+              _HelpStep(
+                icon: Icons.auto_awesome,
+                title: 'Try this',
+                text:
+                    'Open the sparkle menu for ready-made examples. To draw a '
+                    'closed shape, the turns must add up to 360: repeat 8 times, '
+                    'move 100, turn 45 makes an octagon.',
+              ),
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext),
+            child: const Text('Got it'),
+          ),
+        ],
+      ),
+    );
   }
 
   void _snack(String msg) => ScaffoldMessenger.of(context).showSnackBar(
@@ -81,6 +151,11 @@ class _EditorPageState extends State<EditorPage> {
       appBar: AppBar(
         title: const Text('BlockCode'),
         actions: [
+          IconButton(
+            icon: const Icon(Icons.help_outline),
+            tooltip: 'How it works',
+            onPressed: _showHelp,
+          ),
           PopupMenuButton<String>(
             icon: const Icon(Icons.auto_awesome),
             tooltip: 'Examples',
@@ -92,29 +167,27 @@ class _EditorPageState extends State<EditorPage> {
           ),
           IconButton(
             icon: const Icon(Icons.code),
-            tooltip: 'Show code',
+            tooltip: 'Show Python code',
             onPressed: _showCode,
           ),
-          IconButton(
-            icon: const Icon(Icons.save_outlined),
-            tooltip: 'Save',
-            onPressed: () async {
-              await ctrl.save();
-              if (mounted) _snack('Saved');
+          PopupMenuButton<String>(
+            onSelected: (v) async {
+              switch (v) {
+                case 'save':
+                  await ctrl.save();
+                  if (mounted) _snack('Saved');
+                case 'load':
+                  final ok = await ctrl.load();
+                  if (mounted) _snack(ok ? 'Loaded' : 'Nothing saved yet');
+                case 'clear':
+                  ctrl.clearAll();
+              }
             },
-          ),
-          IconButton(
-            icon: const Icon(Icons.folder_open),
-            tooltip: 'Load',
-            onPressed: () async {
-              final ok = await ctrl.load();
-              if (mounted) _snack(ok ? 'Loaded' : 'Nothing saved yet');
-            },
-          ),
-          IconButton(
-            icon: const Icon(Icons.delete_sweep_outlined),
-            tooltip: 'Clear blocks',
-            onPressed: ctrl.clearAll,
+            itemBuilder: (_) => const [
+              PopupMenuItem(value: 'save', child: Text('Save program')),
+              PopupMenuItem(value: 'load', child: Text('Load program')),
+              PopupMenuItem(value: 'clear', child: Text('Clear all blocks')),
+            ],
           ),
         ],
       ),
@@ -149,16 +222,83 @@ class _EditorPageState extends State<EditorPage> {
           return Column(
             children: [
               _Toolbar(ctrl: ctrl),
-              SizedBox(height: 200, child: StageView(turtle: ctrl.turtle)),
-              SizedBox(height: 64, child: _Console(ctrl: ctrl)),
+              SizedBox(height: 240, child: StageView(turtle: ctrl.turtle)),
+              SizedBox(height: 60, child: _Console(ctrl: ctrl)),
+              const SizedBox(height: 4),
               Expanded(child: _Workspace(ctrl: ctrl)),
-              SizedBox(
-                height: 64,
-                child: PaletteView(ctrl: ctrl, axis: Axis.horizontal),
-              ),
+              _PaletteBar(ctrl: ctrl),
             ],
           );
         },
+      ),
+    );
+  }
+}
+
+class _HelpStep extends StatelessWidget {
+  const _HelpStep({
+    required this.icon,
+    required this.title,
+    required this.text,
+  });
+  final IconData icon;
+  final String title;
+  final String text;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 14),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Icon(icon, color: Theme.of(context).colorScheme.primary),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  title,
+                  style: const TextStyle(fontWeight: FontWeight.bold),
+                ),
+                const SizedBox(height: 2),
+                Text(text),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _PaletteBar extends StatelessWidget {
+  const _PaletteBar({required this.ctrl});
+  final ProgramController ctrl;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      color: Theme.of(context).colorScheme.surfaceContainerHigh,
+      child: SafeArea(
+        top: false,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Padding(
+              padding: EdgeInsets.only(top: 8),
+              child: Text(
+                'Tap a block to add it  -  long-press and drag to place it',
+                style: TextStyle(fontSize: 12, color: Colors.grey),
+              ),
+            ),
+            SizedBox(
+              height: 60,
+              child: PaletteView(ctrl: ctrl, axis: Axis.horizontal),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -170,6 +310,7 @@ class _Toolbar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    const small = TextStyle(fontSize: 11, color: Colors.grey);
     return ListenableBuilder(
       listenable: ctrl,
       builder: (context, _) => Padding(
@@ -183,13 +324,15 @@ class _Toolbar extends StatelessWidget {
             ),
             IconButton(
               icon: const Icon(Icons.restart_alt),
-              tooltip: 'Clear stage',
+              tooltip: 'Clear the drawing',
               onPressed: ctrl.clearStage,
             ),
-            const Icon(Icons.speed, size: 20),
+            const SizedBox(width: 4),
+            const Text('slow', style: small),
             Expanded(
               child: Slider(value: ctrl.speed, onChanged: ctrl.setSpeed),
             ),
+            const Text('fast', style: small),
           ],
         ),
       ),
@@ -224,14 +367,30 @@ class _Workspace extends StatelessWidget {
                     bottom: Radius.circular(6),
                   ),
                 ),
-                child: const Text(
-                  'when Run is pressed',
-                  style: TextStyle(
-                    color: Colors.white,
-                    fontWeight: FontWeight.bold,
-                  ),
+                child: const Row(
+                  children: [
+                    Icon(Icons.flag, color: Colors.white, size: 18),
+                    SizedBox(width: 8),
+                    Text(
+                      'when Run is pressed',
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ],
                 ),
               ),
+              if (ctrl.program.isEmpty)
+                const Padding(
+                  padding: EdgeInsets.symmetric(vertical: 16, horizontal: 8),
+                  child: Text(
+                    'Your program is empty.\nTap a block below to add it, or open '
+                    'the sparkle menu for an example. Then press Run.',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(color: Colors.grey),
+                  ),
+                ),
               BlockList(list: ctrl.program, ctrl: ctrl),
               const SizedBox(height: 80),
             ],
@@ -257,15 +416,15 @@ class _Console extends StatelessWidget {
       listenable: ctrl,
       builder: (context, _) => Container(
         width: double.infinity,
-        margin: const EdgeInsets.symmetric(horizontal: 8),
+        margin: const EdgeInsets.symmetric(horizontal: 12),
         padding: const EdgeInsets.all(8),
         decoration: BoxDecoration(
           color: const Color(0xFF1E1E1E),
-          borderRadius: BorderRadius.circular(8),
+          borderRadius: BorderRadius.circular(10),
         ),
         child: ctrl.console.isEmpty
             ? const Text(
-                '> output appears here',
+                '> output from "print" blocks appears here',
                 style: TextStyle(
                   fontFamily: 'monospace',
                   fontSize: 13,

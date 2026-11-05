@@ -5,22 +5,23 @@ import '../../ui/block_colors.dart';
 import 'program_controller.dart';
 
 class PaletteItem {
-  const PaletteItem(this.label, this.color, this.create);
+  const PaletteItem(this.label, this.color, this.icon, this.create);
   final String label;
   final Color color;
+  final IconData icon;
   final Stmt Function() create;
 }
 
 final paletteItems = <PaletteItem>[
-  PaletteItem('move', motionColor, () => MoveStmt()),
-  PaletteItem('turn', motionColor, () => TurnStmt()),
-  PaletteItem('pen up/down', looksColor, () => PenStmt()),
-  PaletteItem('pen color', looksColor, () => ColorStmt()),
-  PaletteItem('repeat', controlColor, () => RepeatStmt()),
-  PaletteItem('while', controlColor, () => WhileStmt()),
-  PaletteItem('if / else', controlColor, () => IfStmt()),
-  PaletteItem('set variable', dataColor, () => SetVarStmt()),
-  PaletteItem('print', dataColor, () => PrintStmt()),
+  PaletteItem('move', motionColor, Icons.arrow_upward, () => MoveStmt()),
+  PaletteItem('turn', motionColor, Icons.rotate_right, () => TurnStmt()),
+  PaletteItem('pen up/down', looksColor, Icons.edit, () => PenStmt()),
+  PaletteItem('pen color', looksColor, Icons.palette, () => ColorStmt()),
+  PaletteItem('repeat', controlColor, Icons.repeat, () => RepeatStmt()),
+  PaletteItem('while', controlColor, Icons.loop, () => WhileStmt()),
+  PaletteItem('if / else', controlColor, Icons.call_split, () => IfStmt()),
+  PaletteItem('set variable', dataColor, Icons.data_object, () => SetVarStmt()),
+  PaletteItem('print', dataColor, Icons.terminal, () => PrintStmt()),
 ];
 
 class _Chip extends StatelessWidget {
@@ -30,18 +31,25 @@ class _Chip extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
       decoration: BoxDecoration(
         color: item.color,
         borderRadius: BorderRadius.circular(20),
       ),
-      child: Text(
-        item.label,
-        style: const TextStyle(
-          color: Colors.white,
-          fontWeight: FontWeight.w600,
-          fontSize: 14,
-        ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(item.icon, size: 18, color: Colors.white),
+          const SizedBox(width: 6),
+          Text(
+            item.label,
+            style: const TextStyle(
+              color: Colors.white,
+              fontWeight: FontWeight.w600,
+              fontSize: 14,
+            ),
+          ),
+        ],
       ),
     );
   }
