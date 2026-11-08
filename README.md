@@ -56,20 +56,36 @@ primary    := number | identifier | "(" comparison ")"
 
 ```
 lib/
-├── main.dart
-├── core/                      # pure language logic
-│   ├── expr.dart              # expression parser + evaluator
-│   ├── ast.dart               # block (statement) classes + JSON
-│   ├── interpreter.dart       # async executor
-│   └── codegen.dart           # AST → Python
+├── main.dart                      # app entry, neon dark theme
+├── core/                          # pure language logic
+│   ├── expr.dart                  # expression parser + evaluator
+│   ├── ast.dart                   # block (statement) classes + JSON
+│   ├── interpreter.dart           # async executor + bot sensors
+│   └── codegen.dart               # AST → Python
+├── game/                          # Quest mode engine
+│   ├── level.dart                 # 7 puzzle levels (text maps)
+│   ├── robot_world.dart           # bot position, gems, lava, sensors
+│   ├── board_view.dart            # animated neon board (CustomPainter)
+│   └── progress.dart              # saved stars + level unlocking
 ├── features/
-│   ├── editor/                # drag-and-drop block editor
-│   └── stage/                 # turtle state + renderer
-└── ui/                        # shared theme and colors
+│   ├── home/                      # title screen + level select
+│   ├── game/                      # Quest level screen
+│   ├── editor/                    # drag-and-drop block editor
+│   │   ├── block_widget.dart      # glowing blocks + drop zones
+│   │   ├── palette.dart           # block menu (filtered per level)
+│   │   ├── editor_parts.dart      # run toolbar, workspace, palette bar
+│   │   ├── editor_page.dart       # Sandbox screen
+│   │   └── program_controller.dart
+│   └── stage/                     # Sandbox turtle drawing
+│       ├── turtle_state.dart
+│       └── stage_view.dart
+└── ui/                            # shared theme
+    ├── block_colors.dart          # neon palette + glow helpers
+    └── neon_background.dart       # animated background
 test/
-└── interpreter_test.dart
+├── interpreter_test.dart          # parser, interpreter, codegen
+└── quest_test.dart                # all 7 levels solved at par
 ```
-
 ---
 
 ## 🚀 Getting started
