@@ -123,6 +123,10 @@ class BlockView extends StatelessWidget {
         p(s.degrees, (v) => s.degrees = v),
         t('degrees'),
       ]),
+      StepStmt() => _Spec('move forward', motionColor, [t('move forward')]),
+      TurnDirStmt s => _Spec('turn', motionColor, [
+        t(s.right ? 'turn right' : 'turn left'),
+      ]),
       PenStmt s => _Spec('pen', looksColor, [
         _Pill(s.down ? 'pen down' : 'pen up', () {
           s.down = !s.down;
