@@ -32,6 +32,12 @@ String toPython(List<Stmt> program) {
           out.writeln('$pad${v.name.trim()} = ${v.value}');
         case PrintStmt p:
           out.writeln('${pad}print(${p.value})');
+        case StepStmt():
+          out.writeln('${pad}bot.step()');
+        case TurnDirStmt t:
+          out.writeln(
+            t.right ? '${pad}bot.turn_right()' : '${pad}bot.turn_left()',
+          );
         case RepeatStmt r:
           out.writeln('${pad}for _ in range(int(${r.times})):');
           emit(r.body, depth + 1);

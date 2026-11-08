@@ -3,14 +3,14 @@ import 'expr.dart';
 int _idCounter = 0;
 String _newId() => 'b${_idCounter++}';
 
-/// Colors a user can cycle through (ARGB ints keep this file Flutter-free).
+/// Pen colors a user can cycle through (ARGB ints keep this file Flutter-free).
 const penColorValues = <int>[
-  0xFF2196F3,
-  0xFFE53935,
-  0xFF43A047,
-  0xFFFB8C00,
-  0xFF8E24AA,
-  0xFF212121,
+  0xFF22E5FF,
+  0xFFFF3DCB,
+  0xFFB6FF3B,
+  0xFFFFC53D,
+  0xFF9B5CFF,
+  0xFFFFFFFF,
 ];
 
 /// One block = one statement. Parameters are stored as text and parsed by
@@ -34,6 +34,8 @@ sealed class Stmt {
       'color' => ColorStmt(j['c'] as int),
       'set' => SetVarStmt(j['n'] as String, j['v'] as String),
       'print' => PrintStmt(j['v'] as String),
+      'step' => StepStmt(),
+      'rturn' => TurnDirStmt(j['r'] as bool),
       'repeat' => RepeatStmt(j['n'] as String, list(j['body'])),
       'while' => WhileStmt(j['c'] as String, list(j['body'])),
       'if' => IfStmt(j['c'] as String, list(j['then']), list(j['else'])),
@@ -41,6 +43,8 @@ sealed class Stmt {
     };
   }
 }
+
+// ---- Sandbox (turtle drawing) blocks ----
 
 class MoveStmt extends Stmt {
   MoveStmt([this.distance = '50']);
@@ -64,7 +68,7 @@ class PenStmt extends Stmt {
 }
 
 class ColorStmt extends Stmt {
-  ColorStmt([this.colorValue = 0xFF2196F3]);
+  ColorStmt([this.colorValue = 0xFF22E5FF]);
   int colorValue;
   @override
   Map<String, dynamic> toJson() => {'t': 'color', 'c': colorValue};
@@ -84,6 +88,25 @@ class PrintStmt extends Stmt {
   @override
   Map<String, dynamic> toJson() => {'t': 'print', 'v': value};
 }
+
+// ---- Quest (robot) blocks ----
+
+/// Move the bot one tile forward.
+class StepStmt extends Stmt {
+  StepStmt();
+  @override
+  Map<String, dynamic> toJson() => {'t': 'step'};
+}
+
+/// Turn the bot 90 degrees left or right.
+class TurnDirStmt extends Stmt {
+  TurnDirStmt([this.right = true]);
+  bool right;
+  @override
+  Map<String, dynamic> toJson() => {'t': 'rturn', 'r': right};
+}
+
+// ---- Control flow ----
 
 class RepeatStmt extends Stmt {
   RepeatStmt([this.times = '4', List<Stmt>? body]) : body = body ?? [];
@@ -129,4 +152,16 @@ class IfStmt extends Stmt {
     'then': thenBody.map((s) => s.toJson()).toList(),
     'else': elseBody.map((s) => s.toJson()).toList(),
   };
+}
+
+/// How many blocks a program uses (nested ones count too). Used for stars.
+int countBlocks(List<Stmt> list) {
+  var n = 0;
+  for (final s in list) {
+    n += 1;
+    for (final c in s.children) {
+      n += countBlocks(c);
+    }
+  }
+  return n;
 }

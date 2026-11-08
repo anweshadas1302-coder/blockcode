@@ -12,7 +12,7 @@ class Segment {
 /// The "world" the program draws on. Heading 0 = up, turning is clockwise.
 /// Origin (0,0) is the center of the stage.
 class TurtleState extends ChangeNotifier {
-  static const _defaultColor = Color(0xFF2196F3);
+  static const _defaultColor = Color(0xFF22E5FF);
 
   double x = 0, y = 0, angle = 0;
   bool penDown = true;

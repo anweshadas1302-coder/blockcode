@@ -1,6 +1,9 @@
+import 'dart:math' as math;
+
 import 'package:flutter/painting.dart' show Color;
 
 import '../features/stage/turtle_state.dart';
+import '../game/robot_world.dart';
 import 'ast.dart';
 import 'expr.dart';
 
@@ -9,16 +12,21 @@ class StoppedSignal implements Exception {}
 
 /// Walks the statement tree. It is async so the UI can repaint between steps
 /// and so we can highlight the block that is currently running.
+///
+/// Pass a [turtle] for Sandbox drawing, or a [robot] for Quest levels.
+/// With a robot, conditions can read the sensors: wall, lava, goal.
 class Interpreter {
   Interpreter({
-    required this.turtle,
+    this.turtle,
+    this.robot,
     required this.delayMs,
     this.onHighlight,
     this.onPrint,
     this.maxSteps = 50000,
   });
 
-  final TurtleState turtle;
+  final TurtleState? turtle;
+  final RobotWorld? robot;
   final int Function() delayMs;
   final void Function(String? blockId)? onHighlight;
   final void Function(String text)? onPrint;
@@ -29,6 +37,14 @@ class Interpreter {
   bool _stopped = false;
 
   void stop() => _stopped = true;
+
+  TurtleState _turtle() =>
+      turtle ?? (throw LangError('Drawing blocks only work in the Sandbox'));
+  RobotWorld _robot() =>
+      robot ?? (throw LangError('Bot blocks only work in Quest levels'));
+
+  /// How long a move animation lasts (never longer than the step delay).
+  int _animMs() => math.max(30, math.min(delayMs(), 180));
 
   Future<void> run(List<Stmt> program) async {
     _steps = 0;
@@ -50,7 +66,15 @@ class Interpreter {
     }
   }
 
-  double _eval(String src) => ExprParser.parse(src).eval(vars);
+  double _eval(String src) {
+    final r = robot;
+    if (r != null) {
+      vars['wall'] = r.wallAhead ? 1.0 : 0.0;
+      vars['lava'] = r.lavaAhead ? 1.0 : 0.0;
+      vars['goal'] = r.atExit ? 1.0 : 0.0;
+    }
+    return ExprParser.parse(src).eval(vars);
+  }
 
   Future<void> _block(List<Stmt> stmts) async {
     for (final s in stmts) {
@@ -72,21 +96,24 @@ class Interpreter {
 
     switch (s) {
       case MoveStmt m:
-        turtle.move(_eval(m.distance));
+        _turtle().move(_eval(m.distance));
       case TurnStmt t:
-        turtle.turn(_eval(t.degrees));
+        _turtle().turn(_eval(t.degrees));
       case PenStmt p:
-        turtle.setPen(p.down);
+        _turtle().setPen(p.down);
       case ColorStmt c:
-        turtle.setColor(Color(c.colorValue));
+        _turtle().setColor(Color(c.colorValue));
       case SetVarStmt v:
         final name = v.name.trim();
-        if (name.isEmpty) {
+        if (name.isEmpty)
           throw LangError('A "set" block needs a variable name');
-        }
         vars[name] = _eval(v.value);
       case PrintStmt p:
         onPrint?.call(_fmt(_eval(p.value)));
+      case StepStmt():
+        _robot().step(_animMs());
+      case TurnDirStmt t:
+        _robot().turn(t.right, _animMs());
       case RepeatStmt r:
         final n = _eval(r.times).floor();
         for (var i = 0; i < n; i++) {
